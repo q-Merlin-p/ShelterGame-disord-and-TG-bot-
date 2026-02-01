@@ -11,7 +11,7 @@ intents = disnake.Intents.default()
 intents.members = True  
 intents.message_content = True
 
-bot = commands.Bot(command_prefix="/", help_command=None, intents=disnake.Intents.all(), test_guilds=[1220705242014941306])
+bot = commands.Bot(command_prefix="/", help_command=None, intents=disnake.Intents.all(), test_guilds=[1435771818651680788])
 startTime = None
 
 with open('config.json', 'r', encoding='utf-8') as f:
