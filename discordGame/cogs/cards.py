@@ -80,7 +80,7 @@ class cardCog(commands.Cog):
                 await inter.response.send_message(f"Вы выбрали профессию: **{chosen_job}**", ephemeral=True)
 
     @commands.slash_command(name="distribute_cards", description="Раздать игровые карты")
-    async def distribute_cards(self, inter: disnake.CommandInteraction, send_special_cards: bool = False):
+    async def distribute_cards(self, inter: disnake.CommandInteraction, send_special_cards: bool = False, with_gender: bool = False):
         # Загружаем данные о картах
         with open("cards.json", "r", encoding="utf-8") as f:
             cards_data = json.load(f)
@@ -112,11 +112,29 @@ class cardCog(commands.Cog):
         fact_cards = list(cards_data['fact_cards'])
         random.shuffle(fact_cards)
 
+        phobia_cards = list(cards_data['phobia_cards'])
+        random.shuffle(phobia_cards)
+
         game_mode_cards = list(cards_data['game_mode_card'].keys())
         random.shuffle(game_mode_cards)
 
         special_cards = list(cards_data['special_cards'])
         random.shuffle(special_cards)
+
+        # Логика распределения гендеров
+        gender_cards = []
+        if with_gender:
+            if len(session_participants) >= 2:
+                # Гарантируем хотя бы одного мужчину и одну женщину
+                gender_cards = ["Мужчина", "Женщина"]
+                # Остальных заполняем случайно
+                for _ in range(len(session_participants) - 2):
+                    gender_cards.append(random.choice(["Мужчина", "Женщина"]))
+            else:
+                # Если игрок один, просто случайный пол
+                gender_cards = [random.choice(["Мужчина", "Женщина"]) for _ in range(len(session_participants))]
+            
+            random.shuffle(gender_cards)
 
         # Отправляем сценарий игры всем участникам
         game_mode_card = game_mode_cards[0]  # Берём одну карту режима игры для всех
@@ -135,6 +153,8 @@ class cardCog(commands.Cog):
             baggage_card = baggage_cards[i]
             hobby_card = hobby_cards[i]
             fact_card = fact_cards[i]
+            phobia_card = phobia_cards[i]
+            gender_card = gender_cards[i] if with_gender else None
             special_card = special_cards[i] if send_special_cards else None  # Определяем, отправлять ли специальную карту
 
             # Отправляем карты игрокам с разными цветами эмбедов
@@ -180,6 +200,26 @@ class cardCog(commands.Cog):
                 color=disnake.Color.from_rgb(0, 0, 139)  # Темно-синий
             )
             fact_embed.timestamp = disnake.utils.utcnow()
+            # Фобия - оранжевый
+            phobia_embed = disnake.Embed(
+                title="Фобия", 
+                description=phobia_card, 
+                color=disnake.Color.orange()  # Оранжевый
+            )
+            phobia_embed.timestamp = disnake.utils.utcnow()
+
+            # Пол (если выбран режим)
+            gender_embed = None
+            if gender_card:
+                # Синий для мужчин, Розовый для женщин
+                color = disnake.Color.blue() if gender_card == "Мужчина" else disnake.Color.from_rgb(255, 105, 180)
+                gender_embed = disnake.Embed(
+                    title="Биология", 
+                    description=f"Ваш пол: **{gender_card}**", 
+                    color=color
+                )
+                gender_embed.timestamp = disnake.utils.utcnow()
+
             # Специальная карта - темно-желтый, если она должна быть отправлена
             special_embed = None
             if special_card:
@@ -199,6 +239,9 @@ class cardCog(commands.Cog):
                 await user.send(embed=baggage_embed)
                 await user.send(embed=hobby_embed)
                 await user.send(embed=fact_embed)
+                await user.send(embed=phobia_embed)
+                if gender_embed:
+                    await user.send(embed=gender_embed)
                 if special_embed:
                     await user.send(embed=special_embed)
             except disnake.errors.NotFound:
